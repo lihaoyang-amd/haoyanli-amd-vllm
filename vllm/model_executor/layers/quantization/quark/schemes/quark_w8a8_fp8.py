@@ -22,7 +22,7 @@ class QuarkW8A8Fp8(QuarkScheme):
     def __init__(self, qscheme: str, is_static_input_scheme: Optional[bool]):
         self.qscheme = qscheme
         self.is_static_input_scheme = is_static_input_scheme
-        self.fp8_linear = Fp8LinearOp(use_per_token_if_dynamic=False)
+        self.fp8_linear = Fp8LinearOp(use_per_token_if_dynamic=True)
         self.out_dtype = torch.get_default_dtype()
 
     @classmethod
@@ -73,6 +73,7 @@ class QuarkW8A8Fp8(QuarkScheme):
                                                   requires_grad=False)
             else:
                 weight_scale = layer.weight_scale.data
+            weight_scale = weight_scale.view(-1, 1)  # shape: [*, 1]
 
             layer.weight = Parameter(weight.t(), requires_grad=False)
             # required by torch.compile to be torch.nn.Parameter
