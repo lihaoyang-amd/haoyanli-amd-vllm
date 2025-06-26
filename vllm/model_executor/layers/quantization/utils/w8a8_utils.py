@@ -213,14 +213,14 @@ def torch_per_token_w8a8_scaled_mm(*, qinput: torch.Tensor,
     # Fused GEMM_DQ Rowwise GEMM
     output = torch._scaled_mm(qinput,
                               weight,
-                              out_dtype=out_dtype,
+                              out_dtype=torch.bfloat16,
                               scale_a=scale_a,
                               scale_b=scale_b.t(),
-                              bias=bias)
+                              bias=bias.to(torch.bfloat16) if bias is not None else bias)
 
     output = torch.narrow(output, 0, 0, input_2d.shape[0])
     output = output.view(*output_shape)
-    return output
+    return output.to(out_dtype)
 
 
 def torch_channelwise_w8a8_scaled_mm(*, qinput: torch.Tensor,
