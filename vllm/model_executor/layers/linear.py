@@ -784,10 +784,15 @@ class MergedColumnParallelLinear(ColumnParallelLinear):
         if isinstance(param, BlockQuantScaleParameter):
             from vllm.model_executor.layers.quantization.fp8 import (
                 Fp8LinearMethod, Fp8MoEMethod)
+            from vllm.model_executor.layers.quantization.quark.quark import (
+                QuarkLinearMethod)            
             assert self.quant_method is not None
             assert isinstance(self.quant_method,
-                              (Fp8LinearMethod, Fp8MoEMethod))
-            weight_block_size = self.quant_method.quant_config.weight_block_size
+                              (Fp8LinearMethod, Fp8MoEMethod, QuarkLinearMethod))
+            if "quark" in str(self.quant_method) :
+                weight_block_size = self.quant_method.quantization_config.weight_block_size
+            else:
+                weight_block_size = self.quant_method.quant_config.weight_block_size
             assert weight_block_size is not None
             block_n, _ = weight_block_size[0], weight_block_size[1]
             shard_offset = (

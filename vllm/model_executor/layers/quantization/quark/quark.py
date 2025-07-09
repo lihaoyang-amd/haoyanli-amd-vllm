@@ -17,7 +17,7 @@ from vllm.model_executor.layers.quantization.kv_cache import BaseKVCacheMethod
 from vllm.model_executor.layers.quantization.quark.quark_moe import (  # noqa: E501
     QuarkMoEMethod)
 from vllm.model_executor.layers.quantization.quark.schemes import (
-    QuarkScheme, QuarkW4A4MXFP4, QuarkW8A8Fp8, QuarkW8A8Int8)
+    QuarkScheme, QuarkW4A4MXFP4, QuarkW8A8Fp8, QuarkW8A8Int8, QuarkBlockFp8)
 from vllm.model_executor.layers.quantization.quark.utils import (
     deep_compare, should_ignore_layer)
 from vllm.platforms import current_platform
@@ -38,6 +38,10 @@ class QuarkConfig(QuantizationConfig):
         if kv_cache_group is None:
             kv_cache_group = []
         self.quant_config = quant_config
+        try:
+            self.weight_block_size = quant_config["layer_quant_config"]["*expert*"]["weight"]["weight_block_size"]
+        except:
+            self.weight_block_size = None
         self.kv_cache_group = kv_cache_group
         self.kv_cache_config = kv_cache_config
         self.pack_method = pack_method
@@ -260,7 +264,8 @@ class QuarkConfig(QuantizationConfig):
 
     def _find_matched_config(self, layer_name: str,
                              module: torch.nn.Module) -> dict[str, Any]:
-
+        if "expert" in layer_name:
+            pass
         proj_name = layer_name.split(".")[-1]
         if proj_name in self.packed_modules_mapping:
             shard_proj_names = self.packed_modules_mapping[proj_name]
@@ -320,7 +325,8 @@ class QuarkConfig(QuantizationConfig):
                                  input_symmetric=input_config.get("symmetric"))
         elif self._is_mx_fp4(weight_config, input_config):
             return QuarkW4A4MXFP4(weight_config, input_config)
-
+        elif weight_config.get("weight_block_size") is not None:
+            return QuarkBlockFp8(weight_config, input_config)
         raise NotImplementedError("No quark compatible scheme was found. "
                                   f"Weight config: {weight_config}, "
                                   f"Input config: {input_config}")
